@@ -1,0 +1,41 @@
+WITH RecursiveSubdivisions AS (
+    SELECT s.id AS sub_id, 
+           s.name AS sub_name,
+           s.parent_id, 
+           0 AS sub_level
+    FROM subdivisions AS s
+    WHERE s.id = 710253
+    UNION ALL
+    SELECT s.id AS sub_id, 
+           s.name AS sub_name,
+           s.parent_id, 
+           rs.sub_level + 1 AS sub_level
+    FROM subdivisions AS s
+    INNER JOIN RecursiveSubdivisions AS rs ON s.parent_id = rs.sub_id
+),
+CollaboratorsWithCount AS (
+    SELECT c.id AS col_id,
+           c.name,
+           c.subdivision_id AS col_sub_id,
+           c.age,
+           s.sub_id,
+           s.sub_name,
+           s.sub_level
+    FROM collaborators AS c
+    INNER JOIN RecursiveSubdivisions AS s ON c.subdivision_id = s.sub_id
+    WHERE c.age < 40 AND LEN(c.name) > 11
+),
+SubdivisionsToExclude AS (
+    SELECT id
+    FROM subdivisions
+    WHERE id IN (100055, 100059)
+)
+SELECT cw.col_id AS id,
+       cw.name,
+       cw.sub_name,
+       cw.col_sub_id AS sub_id,
+       cw.sub_level,
+       (SELECT COUNT(*) FROM CollaboratorsWithCount WHERE col_sub_id = cw.col_sub_id) AS colls_count
+FROM CollaboratorsWithCount AS cw
+WHERE cw.col_sub_id NOT IN (SELECT id FROM SubdivisionsToExclude)
+ORDER BY cw.sub_level;
